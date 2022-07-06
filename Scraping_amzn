@@ -1,0 +1,98 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+import re
+import time
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions
+
+page_url = 'https://www.amazon.com/Apple-iPhone-512GB-Space-Gray/product-reviews/B07ZQRW6N1/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+chrome_path = '/opt/homebrew/bin/chromedriver'
+driver = webdriver.Chrome(executable_path=chrome_path)
+driver.get(page_url)
+
+
+name1 = []
+review1 = []
+rating1 = []
+date1 = []
+title1 = []
+page = 1
+while page <= 20:
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    divs = soup.find_all("div", class_="a-section celwidget")
+
+
+    for idx, div in enumerate(divs):
+
+        p_user = div.find("span", class_= "a-profile-name")
+        if p_user == None:
+            name = "None"
+        else:
+            name = p_user.get_text()
+
+        p_rate = div.find("span", class_="a-icon-alt")
+        if p_rate == None:
+            rate = "None"
+        else:
+            rate = p_rate.get_text()[0]
+
+        p_title = div.find("a", class_="a-size-base a-link-normal review-title a-color-base review-title-content a-text-bold")
+        if p_title == None:
+            title = "None"
+        else:
+            title = p_title.get_text()
+
+        p_date = div.find("span", class_="a-size-base a-color-secondary review-date")
+        if p_date == None:
+            date = "None"
+        else:
+            date = p_date.get_text()
+
+
+        p_review = div.find("div", class_ = "a-row a-spacing-small review-data")
+        if p_review == None:
+            review = "None"
+        else:
+            review = p_review.get_text()
+
+
+
+
+        # print(name,review)
+        rating1.append((rate))
+        title1.append((title))
+        name1.append((name))
+        date1.append((date))
+        review1.append((review))
+
+    driver.find_element_by_xpath("//a[contains(text(),'Next page')]").click()
+    page = page + 1
+    time.sleep(2)
+
+
+
+c = {"name": name1,
+     "rating": rating1,
+     "title":title1,
+     "date": date1,
+     "review": review1}
+reviewr = pd.DataFrame(c)
+reviewr["title"] = reviewr["title"].replace('\n', '', regex=True)
+reviewr["review"] = reviewr["review"].replace('\n', '', regex=True)
+
+
+reviewr.to_csv("project.csv", index=True, header=True )
+
+driver.quit()
+
+
+
+soup = BeautifulSoup(driver.page_source, "html.parser")
+divs = soup.find_all("div", class_="a-section celwidget")
+div = divs[0]
+p_like = div.select("span", class_ = "cr-vote")
+like = p_like.get_text()
